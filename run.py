@@ -1,14 +1,23 @@
 from aiogram import Bot, Dispatcher
+from aiogram.client.session.aiohttp import AiohttpSession
 from config import TOKEN
-from src.handlers import router
 import asyncio
-from src.db.models import async_main
+from src.handlers import textbooks, chapters, problems, solutions, menu
+# from src.db.models import async_main
 
 async def main():
-    await async_main()
+
+    # await async_main()
     bot = Bot(token=TOKEN)
     dp = Dispatcher()
-    dp.include_router(router)
+
+    # Include your routers
+    dp.include_router(textbooks.router)
+    dp.include_router(chapters.router)
+    dp.include_router(problems.router)
+    dp.include_router(solutions.router)
+    dp.include_router(menu.router)
+
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
