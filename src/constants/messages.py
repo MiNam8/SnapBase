@@ -19,7 +19,10 @@ INVALID_TEXTBOOK_NAME = (
 
 ERROR_TEXTBOOK_EXISTS = "❌ A textbook with the name '{name}' already exists or is currently awaiting admin review."
 SUCCESS_TEXTBOOK_CREATED = "✅ Textbook name: {name}\nAdd a chapter to the textbook."
-
+AVAILABLE_TEXTBOOKS = (
+        "📚 Available Textbooks:\n\n"
+        "Select a textbook to browse its chapters:"
+)
 
 
 STEP2_SELECT_CHAPTER = (
@@ -41,4 +44,11 @@ SOLUTION_STEP_MESSAGE_TEMPLATE = (
     "📑 Chapter: {chapter_name}\n"
     "🧮 Problem: {problem_name}\n\n"
     "Step 4: Please send your solution text (or skip by sending 'skip' without braces):"
+)
+
+NEW_PROBLEM_PROMPT = "📝 Please enter the name of the new problem:"
+
+NEW_SOLUTION_PROMPT = (
+    "➕ Add a New Solution\n\n"
+    "Step 1: Select the textbook:"
 )

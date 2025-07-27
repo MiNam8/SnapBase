@@ -1,9 +1,7 @@
 from aiogram import Bot, Dispatcher
-from aiogram.client.session.aiohttp import AiohttpSession
 from config import TOKEN
 import asyncio
 from src.handlers import textbooks, chapters, problems, solutions, menu
-# from src.db.models import async_main
 
 async def main():
 

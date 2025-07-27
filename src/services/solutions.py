@@ -1,4 +1,4 @@
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 from src.utils.helpers import safe_int
 from src.repositories.chapters import create_chapter
@@ -6,8 +6,17 @@ from src.repositories.problems import create_problem
 from src.repositories.textbooks import create_textbook
 from src.repositories.solutions import save_solution_to_db, get_solution_with_problem_by_id
 from src.utils.helpers import format_solution_text
-from src.keyboards.solutions import solution_detail_keyboard 
+from src.keyboards.solutions import solution_detail_keyboard, skip_cancel_keyboard, finish_cancel_keyboard
 import json
+from src.keyboards.textbooks import get_textbooks_keyboard
+from src.states.solutions import AddSolutionStates
+from src.repositories.textbooks import get_accepted_textbook_by_id
+from src.keyboards.chapters import get_chapters_keyboard
+from src.constants.messages import NEW_SOLUTION_PROMPT
+from src.utils.helpers import determine_submission_status, generate_success_message, add_solution_text
+from src.keyboards.menu import get_back_to_main_keyboard
+
+
 
 async def delete_previous_images(callback: CallbackQuery, state: FSMContext):
     """Delete previously sent image messages"""
@@ -97,3 +106,105 @@ async def get_solution_details(solution_id: int):
             pass
 
     return solution_text, file_ids, keyboard
+
+
+async def solution_details(callback: CallbackQuery, state: FSMContext):
+    await delete_previous_images(callback, state)
+    
+    solution_id = int(callback.data.split("_")[-1])
+    text, file_ids, keyboard = await get_solution_details(solution_id)
+    
+    await callback.message.edit_text(text, reply_markup=keyboard)
+
+    if file_ids:
+        await send_and_track_images(callback, state, file_ids)
+
+# Helper function to send images and track message IDs
+async def send_and_track_images(callback: CallbackQuery, state: FSMContext, file_ids: list):
+    """Send images and store their message IDs for later deletion"""
+    sent_message_ids = []
+    
+    for file_id in file_ids:
+        try:
+            sent_message = await callback.message.answer_photo(file_id)
+            sent_message_ids.append(sent_message.message_id)
+        except Exception as e:
+            print(f"Could not send image {file_id}: {e}")
+    
+    # Store the message IDs in state for later cleanup
+    await state.update_data(previous_image_messages=sent_message_ids)
+
+
+async def add_solution(callback: CallbackQuery, state: FSMContext):
+    await delete_previous_images(callback, state)
+    
+    message_text = NEW_SOLUTION_PROMPT
+    keyboard = await get_textbooks_keyboard("add")
+    await callback.message.edit_text(message_text, reply_markup=keyboard)
+    await state.set_state(AddSolutionStates.waiting_for_textbook)
+
+
+async def textbook_for_solution(callback: CallbackQuery, state: FSMContext):
+    textbook_id = int(callback.data.split("_")[-1])
+    await state.update_data(textbook_id=textbook_id)
+    
+    textbook = await get_accepted_textbook_by_id(textbook_id)
+    await state.update_data(textbook_name = textbook.name)
+    
+    message_text = add_solution_text(textbook.name)
+    keyboard = await get_chapters_keyboard(textbook_id, "add")
+    await callback.message.edit_text(
+        message_text,
+        reply_markup=keyboard
+    )
+    await state.set_state(AddSolutionStates.waiting_for_chapter)
+
+async def receive_text(message: Message, state: FSMContext):
+    if message.text.lower() == 'skip':
+        await state.update_data(solution_text=None)
+    else:
+        await state.update_data(solution_text=message.text)
+    
+    keyboard = skip_cancel_keyboard()
+    
+    await message.answer(
+        "Step 5: Send images for your solution (if any), or click 'Skip Images' to finish:",
+        reply_markup=keyboard
+    )
+    await state.set_state(AddSolutionStates.waiting_for_solution_image)
+
+async def receive_image(message: Message, state: FSMContext):
+    data = await state.get_data()
+    image_file_ids = data.get('image_file_ids', [])
+    image_file_ids.append(message.photo[-1].file_id)
+    await state.update_data(image_file_ids=image_file_ids)
+    
+    keyboard = finish_cancel_keyboard()
+    
+    await message.answer(
+        "Image received! Send more images or click 'Finish' to save your solution:",
+        reply_markup=keyboard
+    )
+
+async def final_solution_state(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    username = callback.from_user.username or ""
+    full_name = callback.from_user.full_name or "Anonymous"
+    status = determine_submission_status(username)
+
+    # Call service to create and return solution metadata
+    
+    result = await create_solution_flow(
+        data=data,
+        username=username,
+        full_name=full_name,
+        status=status
+    )
+
+    # Now Telegram-specific part stays in handler
+    message_text = generate_success_message(status)
+    await callback.message.edit_text(
+        message_text,
+        reply_markup=get_back_to_main_keyboard()
+    )
+    await state.clear()

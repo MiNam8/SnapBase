@@ -1,3 +1,4 @@
+from src.db.models import Chapter
 import re
 
 # -------------------- Validation helpers --------------------
@@ -8,7 +9,7 @@ def is_valid_textbook_name_format(name: str) -> bool:
     pattern = r"^.+\s*-\s*.+\s*-\s*((\d+(st|nd|rd|th)? Edition,\s*\d{4})|\d{4})$"
     return re.match(pattern, name) is not None
 
-def is_valid_chapter_name(name: str) -> bool:
+def is_valid_problem_chapter_name(name: str) -> bool:
     return len(name) > 0
 
 
@@ -20,7 +21,7 @@ def format_add_solution(textbook, chapter, problem):
         f"📖 Textbook: {textbook}\n"
         f"📑 Chapter: {chapter}\n"
         f"🧮 Problem: {problem}\n\n"
-        "Step 4: Please send your solution text (or skip by sending 'skip'):"
+        "Step 4: Please send your solution text (or skip by sending 'skip' without braces):"
     )
 
 def format_select_solution(textbook, chapter, problem):
@@ -29,7 +30,7 @@ def format_select_solution(textbook, chapter, problem):
         f"📖 Textbook: {textbook}\n"
         f"📑 Chapter: {chapter}\n"
         f"🧮 Problem: {problem}\n\n"
-        "Step 4: Please send your solution text (or skip by sending 'skip'):"
+        "Step 4: Please send your solution text (or skip by sending 'skip' without braces):"
     )
 
 def determine_submission_status(username: str) -> str:
@@ -53,4 +54,26 @@ def format_solution_text(problem, solution) -> str:
     if solution.text:
         text += f"📝 Solution:\n{solution.text}\n\n"
     
+    return text
+
+def format_textbook_text(textbook_name: str) -> str:
+    text = f"📖 Textbook: {textbook_name}\n\n"
+    text += "Select a chapter to view its problems:"
+    return text
+
+def format_chapter_text(chapter: Chapter):
+    text = f"📖 Textbook: {chapter.textbook.name}\n"
+    text += f"📑 Chapter: {chapter.name}\n\n"
+    text += "Select a problem to view its solutions:"
+    return text
+
+def select_problem_text(textbook_name: str, chapter_name: str):
+    text = f"➕ Add Solution to: {textbook_name}\n"
+    text += f"📑 Chapter: {chapter_name}\n\n"
+    text += "Step 3: Select the problem:"
+    return text
+
+def add_solution_text(textbook_name: str):
+    text = f"➕ Add Solution to: {textbook_name}\n\n"
+    text += "Step 2: Select the chapter:"
     return text

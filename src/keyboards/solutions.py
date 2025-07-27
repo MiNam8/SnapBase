@@ -39,3 +39,15 @@ def solution_detail_keyboard(problem_id: int) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="⬅️ Back to Solutions", callback_data=f"view_problem_{problem_id}")],
         [InlineKeyboardButton(text="🏠 Main Menu", callback_data="main_menu")]
     ])
+
+def skip_cancel_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Skip Images", callback_data="skip_images")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="main_menu")]
+    ])
+
+def finish_cancel_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Finish", callback_data="finish_solution")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="main_menu")]
+    ])
