@@ -25,7 +25,7 @@ async def fetch_textbook_for_viewing(textbook_id: int) -> Textbook:
     textbook = await get_accepted_textbook_by_id(textbook_id)
     return textbook
 
-async def create_textbook_if_not_exists(name: str) -> tuple[bool, str]:
+async def try_create_textbook(name: str) -> tuple[bool, str]:
         async with async_session() as session:
             exists = await textbook_exists_by_name(name)
             if exists:
@@ -33,14 +33,6 @@ async def create_textbook_if_not_exists(name: str) -> tuple[bool, str]:
 
             # Optionally: await TextbookRepository.create(session, name)
             return True, SUCCESS_TEXTBOOK_CREATED.format(name=name)
-        
-async def create_textbook_and_return_id(name: str) -> Tuple[bool, str, int]:
-        async with async_session() as session:
-            if await textbook_exists_by_name(name):
-                return False, ERROR_TEXTBOOK_EXISTS.format(name=name), None
-            
-            new_textbook = await create_textbook(session, name)
-            return True, STEP2_SELECT_CHAPTER.format(name=name), new_textbook.id
         
 async def get_textbook_chapters(textbook_id: int):
         textbook = await fetch_textbook_for_viewing(textbook_id)
@@ -87,7 +79,7 @@ async def finish_textbook_creation(message, state: FSMContext, is_callback=False
     data = await state.get_data()
     textbook_name = data['textbook_name']
     
-    success, msg = await create_textbook_if_not_exists(textbook_name)
+    success, msg = await try_create_textbook(textbook_name)
     
     if is_callback:
         await message.edit_text(msg, reply_markup=get_back_to_main_keyboard())
@@ -123,7 +115,7 @@ async def add_textbook_flow(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AddTextbookStates.waiting_for_textbook_name)
 
 
-async def add_textbook(callback: CallbackQuery, state: FSMContext):
+async def prompt_add_textbook(callback: CallbackQuery, state: FSMContext):
     await delete_previous_images(callback, state)
     
     keyboard = get_cancel_keyboard()
@@ -135,7 +127,7 @@ async def add_textbook(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(AddTextbookStates.waiting_for_textbook_name)
 
-async def move_to_textbooks(callback: CallbackQuery, state: FSMContext):
+async def handle_back_to_textbooks(callback: CallbackQuery, state: FSMContext):
      # Delete any previous images when navigating back
     await delete_previous_images(callback, state)
     

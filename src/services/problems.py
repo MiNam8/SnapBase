@@ -3,14 +3,14 @@ from aiogram.fsm.context import FSMContext
 from src.services.textbooks import finish_textbook_creation, finish_textbook_creation_in_solution_flow
 from src.services.solutions import delete_previous_images
 from src.keyboards.solutions import get_solutions_keyboard
-from src.repositories.problems import get_problem
+from src.repositories.problems import fetch_problem_with_chapter_and_textbook
 from src.utils.helpers import format_select_solution, format_add_solution, is_valid_problem_chapter_name
 from src.states.solutions import AddSolutionStates
 from src.states.problems import AddProblemStates
 from src.keyboards.menu import get_cancel_keyboard
 from src.constants.messages import NEW_PROBLEM_PROMPT, INVALID_PROBLEM_NAME, PROBLEM_ALREADY_EXISTS
 from src.handlers.chapters import view_chapter_problems
-from src.repositories.problems import check_problem_name_for_chapter
+from src.repositories.problems import problem_exists_for_chapter
 
 
 async def handle_textbook_flow(message: Message, state: FSMContext):
@@ -21,22 +21,22 @@ async def handle_textbook_flow(message: Message, state: FSMContext):
     else:
         await finish_textbook_creation(message, state)
 
-async def view_solutions(callback: Message, state: FSMContext):
+async def display_problem_solutions(callback: Message, state: FSMContext):
     await delete_previous_images(callback, state)
     
     problem_id = int(callback.data.split("_")[-1])
     
-    problem = await get_problem(problem_id)
+    problem = await fetch_problem_with_chapter_and_textbook(problem_id)
     
     keyboard = await get_solutions_keyboard(problem_id)
     msg = format_select_solution(problem.chapter.textbook.name, problem.chapter.name, problem.name)
     await callback.message.edit_text(msg, reply_markup=keyboard)
 
-async def select_problem(callback: Message, state: FSMContext):
+async def handle_problem_selection(callback: Message, state: FSMContext):
     problem_id = int(callback.data.split("_")[-1])
     await state.update_data(problem_id=problem_id)
     
-    problem = await get_problem(problem_id)
+    problem = await fetch_problem_with_chapter_and_textbook(problem_id)
     
     keyboard = get_cancel_keyboard()
     
@@ -45,7 +45,7 @@ async def select_problem(callback: Message, state: FSMContext):
     await callback.message.edit_text(msg, reply_markup=keyboard)
     await state.set_state(AddSolutionStates.waiting_for_solution_text)
 
-async def new_problem(callback: Message, state: FSMContext):
+async def prompt_add_problem(callback: Message, state: FSMContext):
     chapter_id = callback.data.split("_")[-1]
     await state.update_data(chapter_id=chapter_id)
 
@@ -68,7 +68,7 @@ async def save_problem(message: Message, state: FSMContext):
     if data.get("chapter_id") != "None":
         chapter_id = int(data.get("chapter_id"))
 
-    if chapter_id and await check_problem_name_for_chapter(chapter_id, problem_name):
+    if chapter_id and await problem_exists_for_chapter(chapter_id, problem_name):
         keyboard = get_cancel_keyboard()
         await message.answer(PROBLEM_ALREADY_EXISTS, reply_markup=keyboard)
         return
@@ -85,7 +85,7 @@ async def save_problem(message: Message, state: FSMContext):
     # Continue to solution text input step
     await state.set_state(AddSolutionStates.waiting_for_solution_text)
 
-async def back_problems(callback: CallbackQuery, state: FSMContext):
+async def handle_back_to_problems(callback: CallbackQuery, state: FSMContext):
     # Delete any previous images when navigating back
     await delete_previous_images(callback, state)
     

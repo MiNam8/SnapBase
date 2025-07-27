@@ -21,7 +21,7 @@ async def get_accepted_chapter_with_textbook(chapter_id: int):
         async with async_session() as session:
             return await get_accepted_with_textbook(session, chapter_id)
         
-async def chapter_problems(callback: CallbackQuery, state: FSMContext):
+async def display_chapter_problems(callback: CallbackQuery, state: FSMContext):
     await delete_previous_images(callback, state)
 
     chapter_id = int(callback.data.split("_")[-1])
@@ -40,7 +40,7 @@ async def chapter_problems(callback: CallbackQuery, state: FSMContext):
         reply_markup=keyboard
     )
 
-async def select_chapter(callback: CallbackQuery, state: FSMContext):
+async def handle_chapter_selection(callback: CallbackQuery, state: FSMContext):
     chapter_id = int(callback.data.split("_")[-1])
     await state.update_data(chapter_id=chapter_id)
 
@@ -56,7 +56,7 @@ async def select_chapter(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AddSolutionStates.waiting_for_problem)
 
 
-async def save_chapter(callback: CallbackQuery, state: FSMContext):
+async def handle_chapter_name(callback: CallbackQuery, state: FSMContext):
     chapter_name = callback.text.strip()
     if not is_valid_problem_chapter_name(chapter_name):
         keyboard = get_back_to_main_keyboard()
@@ -89,7 +89,7 @@ async def save_chapter(callback: CallbackQuery, state: FSMContext):
     # Continue to problem selection step
     await state.set_state(AddSolutionStates.waiting_for_problem)
 
-async def navigate_back_to_chapters(callback: CallbackQuery, state: FSMContext):
+async def handle_back_to_chapters(callback: CallbackQuery, state: FSMContext):
     await delete_previous_images(callback, state)
     
     parts = callback.data.split("_")
@@ -97,7 +97,7 @@ async def navigate_back_to_chapters(callback: CallbackQuery, state: FSMContext):
     textbook_id = int(parts[4])
     
     if action_prefix == "view":
-        await get_chapters(CallbackQuery(
+        await display_chapter_list(CallbackQuery(
             id=callback.id,
             from_user=callback.from_user,
             chat_instance=callback.chat_instance,
@@ -114,7 +114,7 @@ async def navigate_back_to_chapters(callback: CallbackQuery, state: FSMContext):
         ), state)
 
 
-async def get_chapters(callback: CallbackQuery, state: FSMContext):
+async def display_chapter_list(callback: CallbackQuery, state: FSMContext):
     await delete_previous_images(callback, state)
     
     textbook_id = int(callback.data.split("_")[-1])
@@ -124,7 +124,7 @@ async def get_chapters(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(text, reply_markup=keyboard)
 
 
-async def add_chapter(callback: CallbackQuery, state: FSMContext):
+async def prompt_add_chapter(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AddChapterStates.waiting_for_chapter_name)
     await callback.message.edit_text(
         CHAPTER_NAME_PROMPT,

@@ -2,7 +2,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from src.utils.helpers import safe_int
 from src.repositories.chapters import create_chapter
-from src.repositories.problems import create_problem, check_problem_name_for_chapter
+from src.repositories.problems import create_problem, problem_exists_for_chapter
 from src.repositories.textbooks import create_textbook, textbook_exists_by_name
 from src.repositories.solutions import save_solution_to_db, get_solution_with_problem_by_id
 from src.utils.helpers import format_solution_text
@@ -94,7 +94,7 @@ async def upsert_problem(data: dict, status: str, chapter_id: int) -> int | None
     if problem_id:
         return problem_id
 
-    problem = await check_problem_name_for_chapter(chapter_id, problem_name)
+    problem = await problem_exists_for_chapter(chapter_id, problem_name)
     if problem:
         return problem.id
 
@@ -119,7 +119,7 @@ async def get_solution_details(solution_id: int):
     return solution_text, file_ids, keyboard
 
 
-async def solution_details(callback: CallbackQuery, state: FSMContext):
+async def display_solution_details(callback: CallbackQuery, state: FSMContext):
     await delete_previous_images(callback, state)
     
     solution_id = int(callback.data.split("_")[-1])
@@ -146,7 +146,7 @@ async def send_and_track_images(callback: CallbackQuery, state: FSMContext, file
     await state.update_data(previous_image_messages=sent_message_ids)
 
 
-async def add_solution(callback: CallbackQuery, state: FSMContext):
+async def prompt_add_solution(callback: CallbackQuery, state: FSMContext):
     await delete_previous_images(callback, state)
     
     message_text = NEW_SOLUTION_PROMPT
@@ -155,7 +155,7 @@ async def add_solution(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AddSolutionStates.waiting_for_textbook)
 
 
-async def textbook_for_solution(callback: CallbackQuery, state: FSMContext):
+async def handle_textbook_selection_for_solution(callback: CallbackQuery, state: FSMContext):
     textbook_id = int(callback.data.split("_")[-1])
     await state.update_data(textbook_id=textbook_id)
     
@@ -170,7 +170,7 @@ async def textbook_for_solution(callback: CallbackQuery, state: FSMContext):
     )
     await state.set_state(AddSolutionStates.waiting_for_chapter)
 
-async def receive_text(message: Message, state: FSMContext):
+async def handle_solution_text_submission(message: Message, state: FSMContext):
     if message.text.lower() == 'skip':
         await state.update_data(solution_text=None)
     else:
@@ -184,7 +184,7 @@ async def receive_text(message: Message, state: FSMContext):
     )
     await state.set_state(AddSolutionStates.waiting_for_solution_image)
 
-async def receive_image(message: Message, state: FSMContext):
+async def handle_solution_image_submission(message: Message, state: FSMContext):
     data = await state.get_data()
     image_file_ids = data.get('image_file_ids', [])
     image_file_ids.append(message.photo[-1].file_id)
@@ -197,7 +197,7 @@ async def receive_image(message: Message, state: FSMContext):
         reply_markup=keyboard
     )
 
-async def final_solution_state(callback: CallbackQuery, state: FSMContext):
+async def finalize_solution_submission(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     username = callback.from_user.username or ""
     full_name = callback.from_user.full_name or "Anonymous"

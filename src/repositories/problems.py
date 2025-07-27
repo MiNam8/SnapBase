@@ -18,7 +18,7 @@ async def create_problem(name: str, chapter_id: int, status: str) -> Problem:
                 return problem
 
 
-async def get_problem(problem_id: int) -> Problem:
+async def fetch_problem_with_chapter_and_textbook(problem_id: int) -> Problem:
         async with async_session() as session:
                 result = await session.execute(
                 select(Problem).options(
@@ -29,7 +29,7 @@ async def get_problem(problem_id: int) -> Problem:
                 problem = result.scalar_one()
                 return problem
         
-async def check_problem_name_for_chapter(chapter_id: int, problem_name: str) -> bool: 
+async def problem_exists_for_chapter(chapter_id: int, problem_name: str) -> bool: 
         async with async_session() as session:
                 result = await session.execute(
                         select(Problem)

@@ -15,27 +15,27 @@ async def show_help(callback: CallbackQuery):
 
 🔹 *Browse Textbooks*: Navigate through available textbooks, chapters, and problems to view existing solutions\\.
 
-🔹 *Add Solution*: Contribute your own solutions to problems:\\n
-• Select textbook → chapter → problem\\n
-• Add solution text \\(optional\\)\\n
-• Upload images \\(optional\\)\\n
+🔹 *Add Solution*: Contribute your own solutions to problems:
+• Select textbook → chapter → problem
+• Add solution text \\(optional\\)
+• Upload images \\(optional\\)
 • Submit your solution
 
-🔹 *Add Textbook*: Add new textbooks to the database:\\n
-• Enter textbook name \\(required\\)\\n
-• Add description \\(optional\\)\\n
+🔹 *Add Textbook*: Add new textbooks to the database:
+• Enter textbook name \\(required\\)
+• Add description \\(optional\\)
 • Textbook will be available for adding chapters and problems
 
 🔹 *Navigation*: Use the inline buttons to navigate\\. You can always go back or return to the main menu\\.
 
-🔹 *Solution Format*:\\n
-• Text solutions support plain text\\n
-• You can upload multiple images\\n
+🔹 *Solution Format*:
+• Text solutions support plain text
+• You can upload multiple images
 • Both text and images are optional, but at least one is recommended
 
-🔹 *Textbook Requirements*:\\n
-• Textbook name must be at least 3 characters\\n
-• Each textbook name must be unique\\n
+🔹 *Textbook Requirements*:
+• Textbook name must be at least 3 characters
+• Each textbook name must be unique
 • Description is optional but recommended
 
 Need more help\\? Contact the bot administrator\\.
