@@ -12,9 +12,10 @@ async def get_accepted_textbook_by_id(textbook_id: int) -> Textbook:
             return textbook
 
 
-async def exists_by_name(session, name: str) -> bool:
-        result = await session.execute(select(Textbook).where(Textbook.name == name))
-        return result.scalar_one_or_none() is not None
+async def textbook_exists_by_name(textbook_name: str) -> Textbook:
+        async with async_session() as session:
+                result = await session.execute(select(Textbook).where(Textbook.name == textbook_name))
+                return result.scalar_one_or_none()
 
 
 async def create_textbook(name: str, status: str) -> Textbook:

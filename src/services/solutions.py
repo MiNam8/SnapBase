@@ -1,9 +1,9 @@
-from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from src.utils.helpers import safe_int
 from src.repositories.chapters import create_chapter
-from src.repositories.problems import create_problem
-from src.repositories.textbooks import create_textbook
+from src.repositories.problems import create_problem, check_problem_name_for_chapter
+from src.repositories.textbooks import create_textbook, textbook_exists_by_name
 from src.repositories.solutions import save_solution_to_db, get_solution_with_problem_by_id
 from src.utils.helpers import format_solution_text
 from src.keyboards.solutions import solution_detail_keyboard, skip_cancel_keyboard, finish_cancel_keyboard
@@ -15,8 +15,7 @@ from src.keyboards.chapters import get_chapters_keyboard
 from src.constants.messages import NEW_SOLUTION_PROMPT
 from src.utils.helpers import determine_submission_status, generate_success_message, add_solution_text
 from src.keyboards.menu import get_back_to_main_keyboard
-
-
+from src.repositories.chapters import check_chapter_name_for_textbook
 
 async def delete_previous_images(callback: CallbackQuery, state: FSMContext):
     """Delete previously sent image messages"""
@@ -63,6 +62,10 @@ async def upsert_textbook(data: dict, status: str) -> int | None:
     if textbook_id:
         return textbook_id
     
+    textbook = await textbook_exists_by_name(textbook_name)
+    if textbook:
+        return textbook.id
+
     if textbook_name:
         textbook = await create_textbook(name=textbook_name, status=status)
         return textbook.id
@@ -75,6 +78,10 @@ async def upsert_chapter(data: dict, status: str, textbook_id: int) -> int | Non
     if chapter_id:
         return chapter_id
 
+    chapter = await check_chapter_name_for_textbook(textbook_id, chapter_name)
+    if chapter:
+        return chapter.id
+
     if chapter_name:
         chapter = await create_chapter(name=chapter_name, textbook_id=textbook_id, status=status)
         return chapter.id
@@ -86,6 +93,10 @@ async def upsert_problem(data: dict, status: str, chapter_id: int) -> int | None
     problem_id = safe_int(data.get("problem_id"))
     if problem_id:
         return problem_id
+
+    problem = await check_problem_name_for_chapter(chapter_id, problem_name)
+    if problem:
+        return problem.id
 
     if problem_name:
         problem = await create_problem(name=problem_name, chapter_id=chapter_id, status=status)
