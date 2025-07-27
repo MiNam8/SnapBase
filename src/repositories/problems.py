@@ -24,3 +24,14 @@ async def get_problem(problem_id: int) -> Problem:
                 )
                 problem = result.scalar_one()
                 return problem
+        
+async def check_problem_name_for_chapter(chapter_id: int, problem_name: str) -> bool: 
+        async with async_session() as session:
+                result = await session.execute(
+                        select(Problem)
+                        .where(Problem.chapter_id == chapter_id, Problem.name == problem_name)
+                )
+                result = result.scalar_one_or_none()
+                if result:
+                        return True
+                return False

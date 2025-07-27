@@ -45,6 +45,7 @@ SOLUTION_STEP_MESSAGE_TEMPLATE = (
     "🧮 Problem: {problem_name}\n\n"
     "Step 4: Please send your solution text (or skip by sending 'skip' without braces):"
 )
+PROBLEM_ALREADY_EXISTS = "❌ This problem already exists in the selected chapter."
 
 NEW_PROBLEM_PROMPT = "📝 Please enter the name of the new problem:"
 

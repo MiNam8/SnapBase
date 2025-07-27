@@ -2,7 +2,7 @@ from src.db.models import async_session
 from src.repositories.chapters import get_accepted_with_textbook
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
-from src.constants.messages import CHAPTER_NOT_FOUND, EMPTY_CHAPTER_ERROR
+from src.constants.messages import CHAPTER_NOT_FOUND, EMPTY_CHAPTER_ERROR, CHAPTER_ALREADY_EXISTS
 from src.keyboards.problems import get_problems_keyboard
 from src.utils.helpers import format_chapter_text, select_problem_text, is_valid_problem_chapter_name
 from src.states.solutions import AddSolutionStates
@@ -13,6 +13,8 @@ from src.handlers.solutions import select_textbook_for_solution
 from src.services.textbooks import get_textbook_chapters
 from src.states.chapters import AddChapterStates
 from src.constants.messages import CHAPTER_NAME_PROMPT
+from src.repositories.chapters import check_chapter_name_for_textbook
+from src.keyboards.menu import get_cancel_keyboard
 
 
 async def get_accepted_chapter_with_textbook(chapter_id: int):
@@ -66,6 +68,13 @@ async def save_chapter(callback: CallbackQuery, state: FSMContext):
     if data.get("textbook_id") and data.get("textbook_id") != "None":
         textbook_id = int(data.get("textbook_id"))
     textbook_name = data.get("textbook_name")
+
+    print("Check textbook_id and chapter_name:", textbook_id, chapter_name, type(textbook_id), type(chapter_name))
+    if textbook_id and await check_chapter_name_for_textbook(textbook_id, chapter_name):
+        keyboard = get_cancel_keyboard()
+        await callback.answer(CHAPTER_ALREADY_EXISTS, reply_markup=keyboard)
+        return
+
 
     # Show success message and continue to problem selection
     await state.update_data(chapter_name=chapter_name)

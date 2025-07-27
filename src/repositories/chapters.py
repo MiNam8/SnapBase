@@ -25,3 +25,14 @@ async def create_chapter(name: str, textbook_id: int, status: str) -> Chapter:
                 await session.commit()
                 await session.refresh(chapter)
                 return chapter
+        
+async def check_chapter_name_for_textbook(textbook_id: int, chapter_name: str) -> bool:
+        async with async_session() as session:
+                result = await session.execute(
+                        select(Chapter.id)
+                        .where(Chapter.textbook_id == textbook_id, Chapter.name == chapter_name)
+                )
+                result = result.scalar_one_or_none()
+                if result:
+                        return True
+                return False

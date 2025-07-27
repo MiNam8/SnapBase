@@ -8,9 +8,9 @@ from src.utils.helpers import format_select_solution, format_add_solution, is_va
 from src.states.solutions import AddSolutionStates
 from src.states.problems import AddProblemStates
 from src.keyboards.menu import get_cancel_keyboard
-from src.constants.messages import NEW_PROBLEM_PROMPT, INVALID_PROBLEM_NAME
+from src.constants.messages import NEW_PROBLEM_PROMPT, INVALID_PROBLEM_NAME, PROBLEM_ALREADY_EXISTS
 from src.handlers.chapters import view_chapter_problems
-
+from src.repositories.problems import check_problem_name_for_chapter
 
 
 async def handle_textbook_flow(message: Message, state: FSMContext):
@@ -64,9 +64,15 @@ async def save_problem(message: Message, state: FSMContext):
         return
 
     data = await state.get_data()
+    chapter_id = None
     if data.get("chapter_id") != "None":
         chapter_id = int(data.get("chapter_id"))
-        
+
+    if chapter_id and await check_problem_name_for_chapter(chapter_id, problem_name):
+        keyboard = get_cancel_keyboard()
+        await message.answer(PROBLEM_ALREADY_EXISTS, reply_markup=keyboard)
+        return
+
     textbook_name = data.get("textbook_name")
     chapter_name = data.get("chapter_name")
     await state.update_data(problem_name=problem_name)
