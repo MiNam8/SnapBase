@@ -2,10 +2,12 @@ from aiogram import Bot, Dispatcher
 from config import TOKEN
 import asyncio
 from src.handlers import textbooks, chapters, problems, solutions, menu
+from config import configure_logging
+import logging
 
 async def main():
+    configure_logging(level=logging.INFO)
 
-    # await async_main()
     bot = Bot(token=TOKEN)
     dp = Dispatcher()
 
