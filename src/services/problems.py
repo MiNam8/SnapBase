@@ -11,10 +11,13 @@ from src.keyboards.menu import get_cancel_keyboard
 from src.constants.messages import NEW_PROBLEM_PROMPT, INVALID_PROBLEM_NAME, PROBLEM_ALREADY_EXISTS
 from src.handlers.chapters import view_chapter_problems
 from src.repositories.problems import problem_exists_for_chapter
+import logging
 
+logger = logging.getLogger(__name__)
 
 async def handle_textbook_flow(message: Message, state: FSMContext):
     data = await state.get_data()
+    logger.info("Handling textbook flow. in_solution_flow: %s", data.get('in_solution_flow'))
 
     if data.get('in_solution_flow'):
         await finish_textbook_creation_in_solution_flow(message, state)
@@ -22,9 +25,11 @@ async def handle_textbook_flow(message: Message, state: FSMContext):
         await finish_textbook_creation(message, state)
 
 async def display_problem_solutions(callback: Message, state: FSMContext):
+    logger.info("Displaying solutions for problem. Callback data: %s", callback.data)
     await delete_previous_images(callback, state)
     
     problem_id = int(callback.data.split("_")[-1])
+    logger.debug("Parsed problem_id: %d", problem_id)
     
     problem = await fetch_problem_with_chapter_and_textbook(problem_id)
     
@@ -33,6 +38,7 @@ async def display_problem_solutions(callback: Message, state: FSMContext):
     await callback.message.edit_text(msg, reply_markup=keyboard)
 
 async def handle_problem_selection(callback: Message, state: FSMContext):
+    logger.info("Handling problem selection. Callback data: %s", callback.data)
     problem_id = int(callback.data.split("_")[-1])
     await state.update_data(problem_id=problem_id)
     
@@ -47,8 +53,9 @@ async def handle_problem_selection(callback: Message, state: FSMContext):
 
 async def prompt_add_problem(callback: Message, state: FSMContext):
     chapter_id = callback.data.split("_")[-1]
-    await state.update_data(chapter_id=chapter_id)
+    logger.info("Prompting to add problem to chapter_id: %s", chapter_id)
 
+    await state.update_data(chapter_id=chapter_id)
     await state.set_state(AddProblemStates.waiting_for_problem_name)
 
     keyboard = get_cancel_keyboard()
@@ -58,17 +65,21 @@ async def prompt_add_problem(callback: Message, state: FSMContext):
 
 async def save_problem(message: Message, state: FSMContext):
     problem_name = message.text.strip()
+    logger.info("Saving problem. Name: %s", problem_name)
     
     if not is_valid_problem_chapter_name(problem_name):
+        logger.warning("Invalid problem name received: %s", problem_name)
         await message.answer(INVALID_PROBLEM_NAME)
         return
 
     data = await state.get_data()
     chapter_id = None
+    logger.debug("Extracted chapter_id: %s", chapter_id)
     if data.get("chapter_id") != "None":
         chapter_id = int(data.get("chapter_id"))
 
     if chapter_id and await problem_exists_for_chapter(chapter_id, problem_name):
+        logger.info("Problem already exists for chapter_id %d: %s", chapter_id, problem_name)
         keyboard = get_cancel_keyboard()
         await message.answer(PROBLEM_ALREADY_EXISTS, reply_markup=keyboard)
         return
@@ -86,14 +97,20 @@ async def save_problem(message: Message, state: FSMContext):
     await state.set_state(AddSolutionStates.waiting_for_solution_text)
 
 async def handle_back_to_problems(callback: CallbackQuery, state: FSMContext):
-    # Delete any previous images when navigating back
+    logger.info("Handling back to problems. Callback data: %s", callback.data)
     await delete_previous_images(callback, state)
     
     parts = callback.data.split("_")
+    if len(parts) < 5:
+        logger.warning("Unexpected callback data format: %s", callback.data)
+        return
+    
     action_prefix = parts[3]
     chapter_id = int(parts[4])
+    logger.debug("Parsed action_prefix: %s, chapter_id: %d", action_prefix, chapter_id)
     
     if action_prefix == "view":
+        logger.info("Redirecting to view_chapter_problems for chapter_id: %d", chapter_id)
         await view_chapter_problems(CallbackQuery(
             id=callback.id,
             from_user=callback.from_user,

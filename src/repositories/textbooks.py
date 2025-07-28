@@ -1,6 +1,7 @@
 from src.db.models import Textbook, async_session
 from sqlalchemy import select
 import logging
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -37,3 +38,8 @@ async def create_textbook(name: str, status: str) -> Textbook:
                 await session.refresh(textbook)
                 logger.info("Textbook created: %s (ID: %s)", textbook.name, textbook.id)
                 return textbook
+        
+async def get_accepted_textbooks() -> List[Textbook]:
+        async with async_session() as session:
+                result = await session.execute(select(Textbook).where(Textbook.status == "accepted"))
+                return result.scalars().all()

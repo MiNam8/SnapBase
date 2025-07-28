@@ -1,7 +1,8 @@
 from sqlalchemy import select
 from src.db.models import Chapter
 from sqlalchemy.orm import selectinload
-from src.db.models import Textbook, async_session
+from src.db.models import async_session
+from typing import List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -56,3 +57,19 @@ async def check_chapter_name_for_textbook(textbook_id: int, chapter_name: str) -
                 else:
                         logger.info("Chapter '%s' does not exist yet for textbook_id=%s", chapter_name, textbook_id)
                 return chapter
+
+async def get_accepted_with_textbook_id(textbook_id: int) -> List[Chapter]:
+        async with async_session() as session:
+                result = await session.execute(
+                select(Chapter).where(Chapter.textbook_id == textbook_id, 
+                                        Chapter.status == "accepted")
+                )
+                chapters = result.scalars().all()
+                return chapters
+        
+async def get_chapter_by_id(chapter_id: int) -> Chapter:
+        async with async_session() as session:
+                chapter_result = await session.execute(
+                        select(Chapter).where(Chapter.id == chapter_id)
+                )
+                return chapter_result.scalar_one()

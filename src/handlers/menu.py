@@ -5,11 +5,16 @@ from src.services.solutions import delete_previous_images
 from src.keyboards.menu import get_back_to_main_keyboard
 from src.keyboards.menu import get_main_menu_keyboard
 from aiogram.filters import CommandStart
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
 @router.callback_query(F.data == "help")
 async def show_help(callback: CallbackQuery):
+    logger.info("User %s requested help.", callback.from_user.id)
+
     help_text = """
 ❓ *Help \\- How to Use This Bot*
 
@@ -49,7 +54,8 @@ Need more help\\? Contact the bot administrator\\.
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
-    # Clear any existing state and image tracking
+    logger.info("User %s started the bot.", message.from_user.id)
+
     await state.clear()
     await message.answer(
         "🎓 Welcome to the Textbook Solutions Bot!\n\n"
@@ -59,7 +65,8 @@ async def cmd_start(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "main_menu")
 async def show_main_menu(callback: CallbackQuery, state: FSMContext):
-    # Delete any previous images before clearing state
+    logger.info("User %s returned to main menu.", callback.from_user.id)
+
     await delete_previous_images(callback, state)
     await state.clear()
     
