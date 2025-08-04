@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from src.states.solutions import AddSolutionStates
-from src.services.solutions import display_solution_details, prompt_add_solution, handle_textbook_selection_for_solution, handle_solution_text_submission, handle_solution_image_submission, finalize_solution_submission
+from src.services.solutions import display_solution_details, prompt_add_solution, handle_textbook_selection_for_solution, handle_solution_text_submission, handle_solution_image_submission, finalize_solution_submission, store_full_name
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,3 +40,8 @@ async def receive_solution_image(message: Message, state: FSMContext):
 async def finish_solution(callback: CallbackQuery, state: FSMContext):
     logger.info("User %s, triggered 'finish_solution' with data: %s", callback.from_user.id, callback.data)
     await finalize_solution_submission(callback, state)
+
+@router.callback_query(F.data.in_(["anonymity_yes", "anonymity_no"]))
+async def anonymity_check(callback: CallbackQuery, state: FSMContext):
+    logger.info("User %s, triggered 'store_full_name' with data: %s", callback.from_user.id, callback.data)
+    await store_full_name(callback, state, anonymity_choice=callback.data)

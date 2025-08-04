@@ -42,3 +42,9 @@ def finish_cancel_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="✅ Finish", callback_data="finish_solution")],
         [InlineKeyboardButton(text="❌ Cancel", callback_data="main_menu")]
     ])
+
+def get_yes_no_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Yes", callback_data="anonymity_yes")],
+        [InlineKeyboardButton(text="❌ No", callback_data="anonymity_no")]
+    ])

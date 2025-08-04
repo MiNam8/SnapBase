@@ -6,7 +6,7 @@ from src.repositories.problems import create_problem, problem_exists_for_chapter
 from src.repositories.textbooks import create_textbook, textbook_exists_by_name
 from src.repositories.solutions import save_solution_to_db, get_solution_with_problem_by_id
 from src.utils.helpers import format_solution_text
-from src.keyboards.solutions import solution_detail_keyboard, skip_cancel_keyboard, finish_cancel_keyboard
+from src.keyboards.solutions import solution_detail_keyboard, skip_cancel_keyboard, finish_cancel_keyboard, get_yes_no_keyboard
 import json
 from src.keyboards.textbooks import get_textbooks_keyboard
 from src.states.solutions import AddSolutionStates
@@ -42,8 +42,8 @@ async def delete_previous_images(callback: CallbackQuery, state: FSMContext):
     logger.debug("Cleared previous_image_messages from state")
 
 
-async def create_solution_flow(data: dict, username: str, full_name: str, status: str):
-    logger.info("Creating solution flow for user %s (%s) with status %s", username, full_name, status)
+async def create_solution_flow(data: dict, username: str, status: str):
+    logger.info("Creating solution flow for user %s with status %s", username, status)
     textbook_id = await upsert_textbook(data, status)
     chapter_id = await upsert_chapter(data, status, textbook_id)
     problem_id = await upsert_problem(data, status, chapter_id)
@@ -52,7 +52,6 @@ async def create_solution_flow(data: dict, username: str, full_name: str, status
 
     await save_solution_to_db(
         username = username,
-        full_name = full_name,
         data=data,
         problem_id=problem_id,
         status=status
@@ -232,17 +231,36 @@ async def handle_solution_image_submission(message: Message, state: FSMContext):
 
 async def finalize_solution_submission(callback: CallbackQuery, state: FSMContext):
     logger.info("Finalizing solution submission from user: %s", callback.from_user.username)
-    data = await state.get_data()
-    username = callback.from_user.username or ""
     full_name = callback.from_user.full_name or "Anonymous"
-    status = determine_submission_status(username)
 
-    # Call service to create and return solution metadata
-    
+    if full_name != "Anonymous":
+        # Prompt the user about if he wants to stay anonymous.
+        keyboard = get_yes_no_keyboard()
+        await callback.message.edit_text(
+            "Do you want to be anonymous?",
+            reply_markup=keyboard
+        )
+        await state.set_state(AddSolutionStates.waiting_for_anonymity_choice)
+        return
+
+    save_to_db_and_clear_state(callback, state, "Anonymous")
+
+async def store_full_name(callback: CallbackQuery, state: FSMContext, anonymity_choice: str):
+    if anonymity_choice == "anonymity_yes":
+        logger.info("User chose to remain anonymous.")
+        await save_to_db_and_clear_state(callback, state, "Anonymous")
+
+    elif anonymity_choice == "anonymity_no":
+        logger.info("User chose to show full name.")
+        await save_to_db_and_clear_state(callback, state, callback.from_user.username)
+
+async def save_to_db_and_clear_state(callback: CallbackQuery, state: FSMContext, username: str):
+    data = await state.get_data()
+    status = determine_submission_status(callback.from_user.username)
+
     result = await create_solution_flow(
         data=data,
         username=username,
-        full_name=full_name,
         status=status
     )
 

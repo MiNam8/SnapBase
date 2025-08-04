@@ -6,6 +6,7 @@ class AddSolutionStates(StatesGroup):
     waiting_for_problem = State()
     waiting_for_solution_text = State()
     waiting_for_solution_image = State()
+    waiting_for_anonymity_choice = State()
 
 class ImageTrackingState(StatesGroup):
     has_images = State()

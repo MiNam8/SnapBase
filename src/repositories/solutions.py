@@ -21,14 +21,14 @@ async def get_solution_with_problem_by_id(solution_id: int) -> Problem:
         return solution
     
 
-async def save_solution_to_db(username, full_name, data, problem_id, status):
+async def save_solution_to_db(username, data, problem_id, status):
     logger.info("Saving solution for user: %s to problem ID: %s", username, problem_id)
 
     async with async_session() as session:
-        user_name = f"@{username}" if username else (full_name or "Anonymous")
-        logger.info("Saving solution by %s to problem ID %s", user_name, problem_id)
+        logger.info("Saving solution by %s to problem ID %s", username, problem_id)
+        username = username if username == "Anonymous" else ("@" + username)
         solution = Solution(
-            user_name= user_name,
+            user_name= username,
             text=data.get("solution_text"),
             image_file_ids=json.dumps(data.get("image_file_ids", [])) if data.get("image_file_ids") else None,
             problem_id=problem_id,
