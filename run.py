@@ -6,7 +6,7 @@ from config import configure_logging
 import logging
 
 async def main():
-    configure_logging(level=logging.INFO)
+    configure_logging(level=logging.DEBUG)
 
     bot = Bot(token=TOKEN)
     dp = Dispatcher()

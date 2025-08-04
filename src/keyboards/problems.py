@@ -14,9 +14,9 @@ async def get_problems_keyboard(chapter_id: int, action_prefix="view"):
         )])
     
     # Get textbook_id for back navigation
-    chapter = None
-    if action_prefix == "view":
-        chapter = await get_chapter_by_id(chapter_id)
+    # chapter = None
+    # if action_prefix == "view":
+    chapter = await get_chapter_by_id(chapter_id)
     
     if action_prefix == "add":
         keyboard_buttons.append([

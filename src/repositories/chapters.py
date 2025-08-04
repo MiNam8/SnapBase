@@ -73,3 +73,9 @@ async def get_chapter_by_id(chapter_id: int) -> Chapter:
                         select(Chapter).where(Chapter.id == chapter_id)
                 )
                 return chapter_result.scalar_one()
+
+async def get_all_chapters() -> List[Chapter]:
+        async with async_session() as session:
+                result = await session.execute(select(Chapter))
+                chapters = result.scalars().all()
+                return chapters

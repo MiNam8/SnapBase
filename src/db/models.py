@@ -60,7 +60,3 @@ class Solution(Base):
     problem: Mapped["Problem"] = relationship(back_populates="solutions")
     status: Mapped[str] = mapped_column(String, default="awaiting")
 
-
-# async def async_main():
-#     async with engine.begin() as conn:
-#         await conn.run_sync(Base.metadata.create_all)

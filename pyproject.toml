@@ -15,7 +15,8 @@ dependencies = [
     "aiogram (>=3.21.0,<4.0.0)",
     "alembic (>=1.16.4,<2.0.0)",
     "aiohttp[socks] (>=3.12.14,<4.0.0)",
-    "aiohttp-socks (>=0.10.1,<0.11.0)"
+    "aiohttp-socks (>=0.10.1,<0.11.0)",
+    "thefuzz (>=0.22.1,<0.23.0)"
 ]
 
 

@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from src.states.textbooks import AddTextbookStates
-from src.services.textbooks import process_textbook_name, get_textbooks, add_textbook_flow, prompt_add_textbook, handle_back_to_textbooks
+from src.services.textbooks import process_textbook_name, get_textbooks, add_textbook_flow, prompt_add_textbook, handle_back_to_textbooks, handle_textbook_choice
 from src.services.chapters import display_chapter_list
 import logging
 
@@ -43,3 +43,8 @@ async def receive_textbook_name(message: Message, state: FSMContext):
 async def back_to_textbooks(callback: CallbackQuery, state: FSMContext):
     logger.info("User %s triggered 'back_to_textbooks'", callback.from_user.id)
     await handle_back_to_textbooks(callback, state)
+
+@router.callback_query(F.data.startswith("textbook_suggestions:"))
+async def textbook_choice(callback: CallbackQuery, state: FSMContext):
+    logger.info("User %s triggered 'textbook_choice' with textbook id: %s", callback.from_user.id, callback.data.split(":")[1])
+    await handle_textbook_choice(callback, state)

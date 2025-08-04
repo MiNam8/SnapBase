@@ -43,3 +43,18 @@ async def get_accepted_textbooks() -> List[Textbook]:
         async with async_session() as session:
                 result = await session.execute(select(Textbook).where(Textbook.status == "accepted"))
                 return result.scalars().all()
+        
+async def get_all_textbooks() -> List[Textbook]:
+        logger.debug("Inside get_all_textbooks")
+        async with async_session() as session:
+                result = await session.execute(select(Textbook))
+                return result.scalars().all()
+        
+async def get_textbook_by_id(textbook_id: int) -> Textbook:
+        async with async_session() as session:
+                result = await session.execute(
+                        select(Textbook).where(Textbook.id == textbook_id)
+                )
+                textbook = result.scalar_one()
+                logger.info("Textbook found: %s (ID: %s)", textbook.name, textbook.id)
+                return textbook

@@ -1,12 +1,10 @@
-from src.repositories.textbooks import get_accepted_textbook_by_id
-from src.db.models import Textbook, async_session
+from src.repositories.textbooks import get_accepted_textbook_by_id, get_all_textbooks, textbook_exists_by_name
 from src.constants.messages import ERROR_TEXTBOOK_EXISTS, SUCCESS_TEXTBOOK_CREATED, INVALID_TEXTBOOK_NAME, AVAILABLE_TEXTBOOKS
-from src.repositories.textbooks import textbook_exists_by_name, create_textbook
 from src.constants.messages import STEP2_SELECT_CHAPTER
-from typing import Tuple
 from src.keyboards.chapters import get_chapters_keyboard
 from src.utils.helpers import format_textbook_text
 from aiogram.types import Message
+from src.db.models import Textbook
 from aiogram.fsm.context import FSMContext
 from src.utils.helpers import is_valid_textbook_name_length, is_valid_textbook_name_format
 from src.states.solutions import AddSolutionStates
@@ -18,6 +16,10 @@ from src.keyboards.menu import get_cancel_keyboard
 from src.constants.messages import ADD_TEXTBOOK_PROMPT
 from src.states.textbooks import AddTextbookStates
 from src.handlers.solutions import start_add_solution
+from src.utils.fuzzy_matcher import get_best_fuzzy_matches
+from src.keyboards.suggestion_keyboard import get_suggestions_keyboard
+from src.services.fuzzy_match import handle_fuzzy_matches_or_continue
+from src.repositories.textbooks import get_textbook_by_id
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ async def fetch_textbook_for_viewing(textbook_id: int) -> Textbook:
 
     return textbook
 
+
 async def try_create_textbook(name: str) -> tuple[bool, str]:
         logger.info("Attempting to create textbook: %s", name)
         exists = await textbook_exists_by_name(name)
@@ -42,7 +45,8 @@ async def try_create_textbook(name: str) -> tuple[bool, str]:
 
         logger.info("Textbook %s created successfully", name)
         return True, SUCCESS_TEXTBOOK_CREATED.format(name=name)
-        
+
+
 async def get_textbook_chapters(textbook_id: int):
         logger.info("Preparing chapter list for textbook ID: %s", textbook_id)
         textbook = await fetch_textbook_for_viewing(textbook_id)
@@ -51,6 +55,7 @@ async def get_textbook_chapters(textbook_id: int):
 
         textbook_text = format_textbook_text(textbook.name)
         return textbook_text, keyboard
+
 
 async def process_textbook_name(message: Message, state: FSMContext):
     textbook_name = message.text.strip()
@@ -66,9 +71,17 @@ async def process_textbook_name(message: Message, state: FSMContext):
         await message.answer(INVALID_TEXTBOOK_NAME)
         return
 
-    await state.update_data(textbook_name=textbook_name)
-    logger.debug("Updated state with textbook_name")
 
+    await state.update_data(textbook_name=textbook_name)
+    logger.debug("Updated state with textbook_name: %s", textbook_name)
+
+    # here we need to do fuzzy matching against existing DB entities. And if there are good choices prompt the user
+    logger.debug("before handle_fuzzy_matches_or_continue")
+    should_continue = await handle_fuzzy_matches_or_continue(message, state, "textbook", textbook_name, get_all_textbooks)
+    logger.debug("after handle_fuzzy_matches_or_continue")
+    if not should_continue:
+        return
+    
     data = await state.get_data()
 
     if data.get('in_solution_flow'):
@@ -79,17 +92,25 @@ async def process_textbook_name(message: Message, state: FSMContext):
         await finish_textbook_creation(message, state)
 
 
-async def finish_textbook_creation_in_solution_flow(message: Message, state: FSMContext):
+async def finish_textbook_creation_in_solution_flow(message: Message, state: FSMContext, is_after_choice: bool=False):
     """Handle textbook creation within solution flow"""
     data = await state.get_data()
-    textbook_name = data.get('textbook_name')
+    textbook_name = data.get("textbook_name")
+    textbook_id = data.get("textbook_id")
+    logger.debug("The type of textbook_id1: %s", type(textbook_id))
     
-    # # Continue with chapter selection
-    keyboard = await get_chapters_keyboard(None, "add")
-    await message.answer(
-        STEP2_SELECT_CHAPTER.format(name=textbook_name),
-        reply_markup=keyboard
-    )
+    keyboard = await get_chapters_keyboard(int(textbook_id), "add")
+    if not is_after_choice:
+        await message.answer(
+            STEP2_SELECT_CHAPTER.format(name=textbook_name),
+            reply_markup=keyboard
+        )
+    else:
+        await message.edit_text(
+            STEP2_SELECT_CHAPTER.format(name=textbook_name),
+            reply_markup=keyboard
+        )
+
     await state.set_state(AddSolutionStates.waiting_for_chapter)
 
 
@@ -150,6 +171,7 @@ async def prompt_add_textbook(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(AddTextbookStates.waiting_for_textbook_name)
 
+
 async def handle_back_to_textbooks(callback: CallbackQuery, state: FSMContext):
     logger.info("User %s clicked 'back_to_textbooks' with data: %s", callback.from_user.id, callback.data)
     await delete_previous_images(callback, state)
@@ -163,3 +185,21 @@ async def handle_back_to_textbooks(callback: CallbackQuery, state: FSMContext):
         await start_add_solution(callback, state)
     else:
         logger.warning("Unknown action prefix in callback: %s", callback.data)
+
+
+async def handle_textbook_choice(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    user_choice = callback.data.split(":")[1]
+    
+    if user_choice != "none":
+        await state.update_data(textbook_id=user_choice)
+        
+        textbook = await get_textbook_by_id(int(user_choice))
+        await state.update_data(textbook_name = textbook.name)
+
+    if data.get('in_solution_flow'):
+        logger.debug("Continuing textbook flow inside solution flow")
+        await finish_textbook_creation_in_solution_flow(callback.message, state, True)
+    else:
+        logger.debug("Continuing textbook creation in normal flow")
+        await finish_textbook_creation(callback.message, state)

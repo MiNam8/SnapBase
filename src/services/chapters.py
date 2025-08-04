@@ -1,5 +1,4 @@
 from src.db.models import async_session
-from src.repositories.chapters import get_accepted_with_textbook
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 from src.constants.messages import CHAPTER_NOT_FOUND, EMPTY_CHAPTER_ERROR, CHAPTER_ALREADY_EXISTS
@@ -13,8 +12,9 @@ from src.handlers.solutions import select_textbook_for_solution
 from src.services.textbooks import get_textbook_chapters
 from src.states.chapters import AddChapterStates
 from src.constants.messages import CHAPTER_NAME_PROMPT
-from src.repositories.chapters import check_chapter_name_for_textbook
+from src.repositories.chapters import check_chapter_name_for_textbook, get_all_chapters, get_accepted_with_textbook, get_chapter_by_id
 from src.keyboards.menu import get_cancel_keyboard
+from src.services.fuzzy_match import handle_fuzzy_matches_or_continue
 import logging
 
 logger = logging.getLogger(__name__)
@@ -90,10 +90,17 @@ async def handle_chapter_name(callback: CallbackQuery, state: FSMContext):
         await callback.answer(CHAPTER_ALREADY_EXISTS, reply_markup=keyboard)
         return
 
+    await state.update_data(chapter_name=chapter_name)
+    logger.debug("Updated state with textbook_name: %s", textbook_name)
+
+    # here we need to do fuzzy matching against existing DB entities. And if there are good choices prompt the user
+    logger.debug("before handle_fuzzy_matches_or_continue")
+    should_continue = await handle_fuzzy_matches_or_continue(callback.message, state, "chapter", chapter_name, get_all_chapters)
+    logger.debug("after handle_fuzzy_matches_or_continue")
+    if not should_continue:
+        return
 
     logger.info("User %s is proceeding to add chapter '%s' under textbook '%s'", user_id, chapter_name, textbook_name)
-    await state.update_data(chapter_name=chapter_name)
-
     message_text = select_problem_text(textbook_name, chapter_name)    
     keyboard = await get_problems_keyboard(None, action_prefix="add")
     await callback.answer(
@@ -157,3 +164,29 @@ async def prompt_add_chapter(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text="❌ Cancel", callback_data="main_menu")]
         ])
     )
+
+
+async def handle_chapter_choice(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    user_choice = callback.data.split(":")[1]
+    
+    if user_choice != "none":
+        await state.update_data(chapter_id=user_choice)
+        
+        chapter = await get_chapter_by_id(int(user_choice))
+        await state.update_data(chapter_name = chapter.name)
+
+    user_id = callback.from_user.id
+    textbook_name = state.get_data("textbook_name")
+    chapter_name = state.get_data("chapter_name")
+
+    logger.info("User %s is proceeding to add chapter '%s' under textbook '%s'", user_id, chapter_name, textbook_name)
+    message_text = select_problem_text(textbook_name, chapter_name)    
+    keyboard = await get_problems_keyboard(int(user_choice), action_prefix="add")
+    await callback.answer(
+        message_text,
+        reply_markup=keyboard
+    )
+
+    # Continue to problem selection step
+    await state.set_state(AddSolutionStates.waiting_for_problem)
