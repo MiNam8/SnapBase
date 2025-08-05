@@ -42,7 +42,7 @@ async def delete_previous_images(callback: CallbackQuery, state: FSMContext):
     logger.debug("Cleared previous_image_messages from state")
 
 
-async def create_solution_flow(data: dict, username: str, status: str):
+async def create_solution_flow(data: dict, username: str, status: str, real_username: str):
     logger.info("Creating solution flow for user %s with status %s", username, status)
     textbook_id = await upsert_textbook(data, status)
     chapter_id = await upsert_chapter(data, status, textbook_id)
@@ -54,7 +54,8 @@ async def create_solution_flow(data: dict, username: str, status: str):
         username = username,
         data=data,
         problem_id=problem_id,
-        status=status
+        status=status,
+        real_username=real_username
     )
 
     return {
@@ -257,11 +258,15 @@ async def store_full_name(callback: CallbackQuery, state: FSMContext, anonymity_
 async def save_to_db_and_clear_state(callback: CallbackQuery, state: FSMContext, username: str):
     data = await state.get_data()
     status = determine_submission_status(callback.from_user.username)
+    real_username = '@' + callback.from_user.username
+    if real_username == '@':
+        real_username = "no"
 
     result = await create_solution_flow(
         data=data,
         username=username,
-        status=status
+        status=status,
+        real_username=real_username
     )
 
     logger.info("Solution successfully created: %s", result)

@@ -59,4 +59,4 @@ class Solution(Base):
     problem_id: Mapped[int] = mapped_column(ForeignKey("problems.id"))
     problem: Mapped["Problem"] = relationship(back_populates="solutions")
     status: Mapped[str] = mapped_column(String, default="awaiting")
-
+    real_username: Mapped[str] = mapped_column(String, nullable=False)

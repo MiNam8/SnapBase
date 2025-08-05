@@ -21,7 +21,7 @@ async def get_solution_with_problem_by_id(solution_id: int) -> Problem:
         return solution
     
 
-async def save_solution_to_db(username, data, problem_id, status):
+async def save_solution_to_db(username, data, problem_id, status, real_username):
     logger.info("Saving solution for user: %s to problem ID: %s", username, problem_id)
 
     async with async_session() as session:
@@ -32,7 +32,8 @@ async def save_solution_to_db(username, data, problem_id, status):
             text=data.get("solution_text"),
             image_file_ids=json.dumps(data.get("image_file_ids", [])) if data.get("image_file_ids") else None,
             problem_id=problem_id,
-            status=status
+            status=status,
+            real_username=real_username
         )
         session.add(solution)
         await session.flush()
